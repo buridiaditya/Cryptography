@@ -108,8 +108,8 @@ int main(int argn,char **argv){
     //// ENSURE PLAIN TEXT SIZE TO BE EQUAL TO ROUNDKEY SIZE
     while(1){
         scanf("%s",mode);
-        scanf("%s",plainText);
         if(strcmp(mode,"E")==0){
+            scanf("%s",plainText);
             printf("Encryption of %s : ",plainText);
             plainTextBinary = textToBinary(plainText);
             
@@ -141,6 +141,7 @@ int main(int argn,char **argv){
             printf("\n");   
         }
         else if(strcmp(mode,"D") == 0){
+            scanf("%s",plainText);
             plainTextBinary = binaryStringBoolArray(plainText);
             for(l = 0; l <  (strlen(plainText))/lengthOfRoundKey; l++){
                 plainTextBinTrun = plainTextBinary + lengthOfRoundKey*l;
