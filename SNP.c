@@ -1,20 +1,60 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
+#include <stdbool.h>
 
 // XOR function 
-bool* XOR(bool* A,bool * B,int len){
-    bool *C = (bool*)malloc(sizeof(bool)*len);    
+void XOR(bool* A,bool * B,int len){
     int i;
     for(i = 0; i < len; i++)
-        C[i] = A[i]^B[i];
-    return C;
+        A[i] = A[i]^B[i];
+    return ;
+}
+
+// Generates Private Key Randomly
+bool* generatePrivateKey(int size){
+    int i;
+    bool * key = (bool*) malloc(sizeof(bool) * size);
+    for(i = 0; i < size; i++)
+        key[i] = rand()%2;
+    return key;
+}
+
+// Converts plain Text to binary
+bool* textToBinary(char* plainText){
+    int i,j;
+    bool * binaryPlainText = (bool*) malloc(strlen(plainText) * 8 * sizeof(bool) );
+    for( i = 0; i < strlen(plainText); i++ ){
+        for( j = 0; j < 8; j++ )
+        binaryPlainText[j+8*i] = (plainText[i] & (1<<(7-j)) ? (1):(0) );
+    }
+    return binaryPlainText;
+}
+
+bool* binaryStringBoolArray(char* input){
+    int i;
+    bool* array = (bool*)malloc(sizeof(bool)*strlen(input));
+    for(i = 0; i < strlen(input); i++)
+        array[i] = input[i]-'0';
+    return array;
+}
+
+// Generates Round Keys
+bool** generateRoundKeys(bool* key,int size,int rounds){
+    int i ;
+    if(rounds > size/4) rounds = size/4;
+    bool ** keys = (bool**)malloc(sizeof(bool*)*rounds);
+
+    for(i = 0; i < rounds; i++)
+        keys[i] = key + 4;
+    return keys;
 }
 
 // Substitution function
-void substitution(bool **Stable,bool* text,int length){
+void substitution(bool Stable[16][4],bool* text){
     int i;
-    bool* Sub = Stable[text[3]*8 + text[2]*4 + text[1]*2 + text[0]*1];
+    bool* Sub = Stable[text[0]*8 + text[1]*4 + text[2]*2 + text[3]*1];
     for(i = 0; i < 4; i++)
         text[i] = Sub[i];
     return;
@@ -22,60 +62,110 @@ void substitution(bool **Stable,bool* text,int length){
 
 // Permutation function
 void permutation(int* Ptable,bool* text,int length){
-    int 
-}
-
-int main(int argn,char ** argv){
-    char * keyString = argv[1];
-    char * plainText = argv[2];
-    char * mode = argv[3];
-    bool key[32],i,j,k;
-    bool plainTextBin[16];
-    for(i = 0; i < 16; i++)
-        plainTextBin[i] = plainText[i] - '0';
-    for(i = 0; i < 32; i++)
-        key[i] = keyString[i]-'0';
-    // Assuming input is in HexaDecimal mode so each character is equivalently a 4 bit string. Assuming 4 rounds and each plain text contains 16 bits. 
-    // Generate round Keys
-    bool keys[5][16];
-    for(i = 0; i < 5; i++){
-        for(j = 0; j < 16; j++){
-            keys[i][j] = key[(4*i+j)];
+    int i;
+    bool temp;
+    bool memory[length];
+    for(i = 0; i < length; i++)
+        memory[i] = false;
+    for(int i = 0; i < length; i++){
+        if(memory[i] == false){
+            memory[Ptable[i]-1] = true;
+            memory[i] = true;
+            temp = text[i];
+            text[i] = text[Ptable[i]-1];
+            text[Ptable[i]-1] = temp;
         }
     }
-    // Substitution table - Hard Coded for now
-    bool Stable[5][4] = {{1,1,1,0},
-                        {0,1,0,0},
-                        {1,1,0,1},
-                        {0,0,0,1},
-                        {0,0,1,0},
-                        {1,1,1,1},
-                        {1,0,1,1},
-                        {1,0,0,0},
-                        {0,0,1,1},
-                        {1,0,1,0},
-                        {0,1,1,0},
-                        {1,1,0,0},
-                        {0,1,0,1},
-                        {1,0,0,1},
-                        {0,0,0,0},
-                        {0,1,1,1},
-                        };
+    return;
+}
 
-    // Permutation table - Hard Coded for now
+int main(int argn,char **argv){
 
+    char * plainText = (char*)malloc(sizeof(char)*100);
+    char * mode = (char*)malloc(sizeof(char)*5);
+    bool * key;
+    bool** roundKeys;
+    bool* plainTextBinary;
+    bool* plainTextBinTrun;
+    bool keys[5][16];
+    int i,j,k,l,m,sizeOfKey = 32,rounds = 5;
+    int lengthOfRoundKey = ((sizeOfKey/4 < rounds)?(4):( (sizeOfKey/4 - rounds + 1) * 4 ));
+
+    srand(time(NULL));
+    
+    key = generatePrivateKey(sizeOfKey);
+    roundKeys = generateRoundKeys(key,sizeOfKey,rounds);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Substitution table 
+    bool Stable[16][4] = {{1,1,1,0},{0,1,0,0},{1,1,0,1},{0,0,0,1},{0,0,1,0},{1,1,1,1},{1,0,1,1},{1,0,0,0},{0,0,1,1},{1,0,1,0},{0,1,1,0},{1,1,0,0},{0,1,0,1},{1,0,0,1},{0,0,0,0},{0,1,1,1}};
+    bool SInvtable[16][4] = {{1,1,1,0},{0,0,1,1},{0,1,0,0},{1,0,0,0},{0,0,0,1},{1,1,0,0},{1,0,1,0},{1,1,1,1},{0,1,1,1},{1,1,0,1},{1,0,0,1},{0,1,1,0},{1,0,1,1},{0,0,1,0},{0,0,0,0},{0,1,0,1}};
+
+    // Permutation table 
     int Ptable[16] = {1,5,9,13,2,6,10,14,3,7,11,15,4,8,12,16};
-    if(strcmp(mode,"E")==0){
-        for( i = 0; i < 4-1; i++){
-            plainTextBin = XOR(plainTextBin,keys[i]);
-            for(j = 0; j < 4; j++){
-                substitution(Stable,plainTextBin + 4*sizeof(bool)*j,4);
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    //// ENSURE PLAIN TEXT SIZE TO BE EQUAL TO ROUNDKEY SIZE
+    while(1){
+        scanf("%s",mode);
+        scanf("%s",plainText);
+        if(strcmp(mode,"E")==0){
+            printf("Encryption of %s : ",plainText);
+            plainTextBinary = textToBinary(plainText);
+            
+            for(i = 0; i < strlen(plainText)*8; i++)
+                printf("%d",plainTextBinary[i]);
+            printf("\n");
+
+            for( l = 0; l < (strlen(plainText)*8)/lengthOfRoundKey; l++){
+                plainTextBinTrun = plainTextBinary + lengthOfRoundKey*l;
+
+                for( i = 0; i < rounds-2; i++){
+                    XOR(plainTextBinTrun,keys[i],lengthOfRoundKey);
+                    for(j = 0; j < lengthOfRoundKey/4; j++){
+                        substitution(Stable,plainTextBinTrun + 4*j);
+                    }
+                    permutation(&Ptable[0],plainTextBinTrun,lengthOfRoundKey);
+                }
+                XOR(plainTextBinTrun,keys[rounds-2],lengthOfRoundKey);
+                for(i = 0; i < lengthOfRoundKey/4; i++)    
+                    substitution(Stable,plainTextBinTrun + 4*i);
+                
+                XOR(plainTextBinTrun,keys[rounds-1],lengthOfRoundKey); 
+
             }
-            permutation(Ptable,plainTextBin,16);
+            printf("Encrypted : ");
+            for(i = 0; i < strlen(plainText)*8; i++){
+                printf("%d",plainTextBinary[i]);   
+            }
+            printf("\n");   
         }
-        plainTextBin = XOR(plainTextBin,keys[3]);
-        for(i = 0; i < 4; i++)    
-            substitution(Stable,plainTextBin + 4*sizeof(bool)*i,4);
-        plainTextBin = XOR(plainTextBin,keys[4]); 
+        else if(strcmp(mode,"D") == 0){
+            plainTextBinary = binaryStringBoolArray(plainText);
+            for(l = 0; l <  (strlen(plainText))/lengthOfRoundKey; l++){
+                plainTextBinTrun = plainTextBinary + lengthOfRoundKey*l;
+                
+                XOR(plainTextBinTrun,keys[rounds-1],lengthOfRoundKey);
+                
+                for(i = 0; i < lengthOfRoundKey/4; i++)
+                    substitution(SInvtable,plainTextBinTrun + 4 * i);
+                XOR(plainTextBinTrun,keys[rounds-2],lengthOfRoundKey);
+                for(i = rounds-3; i >= 0; i--){
+                    permutation(&Ptable[0],plainTextBinTrun,lengthOfRoundKey);
+                    for( j = 0; j < lengthOfRoundKey/4; j++){
+                        substitution(SInvtable,plainTextBinTrun + 4 * j);
+                    }
+                    XOR(plainTextBinTrun,keys[i],lengthOfRoundKey);
+                }
+            }
+            printf("Decrypted : ");
+            for(int i = 0; i < strlen(plainText); i++){
+                printf("%d",plainTextBinary[i]);   
+            }
+            printf("\n");
+        }
+        else if(strcmp(mode,"exit")==0){
+            break;
+        }
     }
 }
